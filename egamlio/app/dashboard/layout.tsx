@@ -7,7 +7,17 @@ export default function DashboardLayout({
 }: {
     children: React.ReactNode,
 }) {
-    const path = usePathname() 
+    const path = usePathname()
+    const data = localStorage.getItem("data")
+    const user =  JSON.parse(data); 
+    if (!data) {
+        window.location.href = "/login"
+    }
+    const handleLogout = () => {
+        localStorage.removeItem("data")
+        window.location.href = "/login"
+    }
+    
     return (
         <>
             <section className="banner-section inner-banner coach dashboard">
@@ -44,8 +54,8 @@ export default function DashboardLayout({
                                     <div className="profile-img">
                                         <img src="/images/author-profile-4.png" alt="icon" />
                                     </div>
-                                    <h5>Willis Myers</h5>
-                                    <Link href="#" className="cmn-btn alt">Logout</Link>
+                                    <h5>{user.firstName +" "+ user.lastName}</h5>
+                                    <Link href="#" className="cmn-btn alt" onClick={handleLogout}>Logout</Link>
                                 </div>
                                 <div className="sidebar-single">
                                     <ul>

@@ -1,11 +1,44 @@
+import { useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import axios from "axios";
+import { useRouter } from "next/router";
 
-const login = () => {
+const Login = () => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const router = useRouter();
+
+    const handleLogin = async (e: { preventDefault: () => void; }) => { ///// >>
+        e.preventDefault();
+        setError("");
+
+        try {
+            const response = await axios.post("https://stemprotocol.codefremics.com/api/v2/users/login", {
+                username: email,
+                password: password,
+            });
+
+            const status = response.data.status
+            if (status === 200) {
+                const data  = response.data;
+                localStorage.setItem("data", JSON.stringify(data));
+                router.push("/dashboard");
+            } else if (status != 200 ){
+                console.error("Login error:", response.data.description);
+                setError(`${response.data.description} Please Try Again` );
+            }
+        } catch (err) {
+            console.error("Login error:", err);
+            setError("You were not logged in successfully, Please Try Again.");
+        }
+    };
+
     return (
         <>
             <Head>
-            <title>Egamlio - Esports and Gaming Courses Website NextJS Template</title>
+                <title>Egamlio - Esports and Gaming Courses Website NextJS Template</title>
                 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css" rel="stylesheet" />
             </Head>
             <section className="login-reg">
@@ -34,19 +67,32 @@ const login = () => {
                                             <h4>Welcome Back!</h4>
                                             <p>We're so excited to see you again! Log In to your Egamlio Account!</p>
                                         </div>
-                                        <form action="#">
+                                        {error && <p style={{ color: "red" }}>{error}</p>}
+                                        <form onSubmit={handleLogin}>
                                             <div className="row">
                                                 <div className="col-12">
                                                     <div className="single-input">
                                                         <label htmlFor="email">Email Address</label>
                                                         <div className="input-box">
-                                                            <input type="text" id="email" placeholder="Enter Your Email" />
+                                                            <input
+                                                                type="text"
+                                                                id="email"
+                                                                placeholder="Enter Your Email"
+                                                                value={email}
+                                                                onChange={(e) => setEmail(e.target.value)}
+                                                            />
                                                         </div>
                                                     </div>
                                                     <div className="single-input">
                                                         <label htmlFor="passInput">Password</label>
                                                         <div className="input-box">
-                                                            <input type="text" id="passInput" placeholder="Enter Your Password" />
+                                                            <input
+                                                                type="password"
+                                                                id="passInput"
+                                                                placeholder="Enter Your Password"
+                                                                value={password}
+                                                                onChange={(e) => setPassword(e.target.value)}
+                                                            />
                                                             <img className="showPass" src="/images/icon/show-hide.png" alt="icon" />
                                                         </div>
                                                     </div>
@@ -66,7 +112,7 @@ const login = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <button className="cmn-btn mt-40 w-100">Login</button>
+                                            <button className="cmn-btn mt-40 w-100" type="submit">Login</button>
                                         </form>
                                         <div className="reg-with">
                                             <div className="or">
@@ -95,4 +141,4 @@ const login = () => {
     );
 };
 
-export default login;
+export default Login;
