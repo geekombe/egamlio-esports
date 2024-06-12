@@ -1,14 +1,11 @@
-"use client"
+"use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
-export default function DashboardLayout({
-    children,
-}: {
-    children: React.ReactNode,
-}) {
+export default function DashboardLayout({ children }) {
     const path = usePathname();
+    const router = useRouter(); // Add useRouter hook
     const data = localStorage.getItem("data");
     const user = data ? JSON.parse(data) : null;
     const [error, setError] = useState("");
@@ -23,14 +20,40 @@ export default function DashboardLayout({
         description: ''
     });
     const [errors, setErrors] = useState({});
+    const [customers, setCustomers] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
 
     if (!data) {
         window.location.href = "/login";
     }
 
+    useEffect(() => {
+        const fetchCustomers = async () => {
+            try {
+                const response = await fetch("https://stemprotocol.codefremics.com/api/v2/customers/get-merchant-customers/1", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${user.access_token}`
+                    }
+                });
+                const result = await response.json();
+                if (result.status === 200) {
+                    setCustomers(result.response);
+                    console.log(result);
+                } else {
+                    setError("Failed to fetch customers");
+                }
+            } catch (error) {
+                setError("An error occurred: " + error.message);
+            }
+        };
+        fetchCustomers();
+    }, []);
+
     const handleLogout = () => {
         localStorage.removeItem("data");
-        window.location.href = "/login"; // >>
+        window.location.href = "/login";
     };
 
     const handleInputChange = (e) => {
@@ -51,7 +74,7 @@ export default function DashboardLayout({
         } else if (!/^\d+$/.test(formData.mobile_number)) {
             errors.mobile_number = "Mobile number must contain only digits";
         }
-                if (!formData.email) {
+        if (!formData.email) {
             errors.email = "Email is required";
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
             errors.email = "Email address is invalid";
@@ -68,11 +91,8 @@ export default function DashboardLayout({
             return;
         }
         setErrors({});
-        // console.log(user.access_token)
-        // console.log(formData)
 
-        try {    
-            
+        try {
             setError("");
             setSuccess("");
             const response = await fetch("https://stemprotocol.codefremics.com/api/v2/customers/create", {
@@ -86,12 +106,11 @@ export default function DashboardLayout({
 
             const result = await response.json();
             if (result.status === 200) {
-
                 setSuccess(`${result.description}`);
                 setTimeout(() => {
                     setShowModal(false);
-                  }, 12000);
-                                  setFormData({
+                }, 12000);
+                setFormData({
                     first_name: '',
                     other_names: '',
                     gender: '',
@@ -100,13 +119,29 @@ export default function DashboardLayout({
                     description: ''
                 });
             } else {
-                // console.error(result)
                 setError(`Sorry, You couldn't add a customer because ${result.msg}. Please try again!`);
             }
         } catch (error) {
             alert("An error occurred: " + error.message);
         }
     };
+
+    const handleSearch = (e) => {
+        setSearchTerm(e.target.value);
+    };
+
+    const handleRowClick = (customerId) => {
+        localStorage.setItem("customerId", customerId)
+        router.push(`/customer`);
+
+    };
+
+    const filteredCustomers = customers.filter(customer => 
+        (customer.first_name?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()) ||
+        (customer.other_names?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()) ||
+        (customer.email?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()) ||
+        (customer.mobile_number?.toLowerCase() ?? "").includes(searchTerm.toLowerCase())
+    );
 
     return (
         <>
@@ -145,7 +180,7 @@ export default function DashboardLayout({
                                     <div className="profile-img">
                                         <img src="/images/author-profile-4.png" alt="icon" />
                                     </div>
-                                    <h5>{user.firstName +" "+ user.lastName}</h5>
+                                    <h5>{user.firstName + " " + user.lastName}</h5>
                                     <Link href="#" className="cmn-btn alt" onClick={handleLogout}>Logout</Link>
                                 </div>
                                 <div className="sidebar-single">
@@ -199,6 +234,37 @@ export default function DashboardLayout({
                             </div>
                             <div className="col-xxl-9 col-lg-8 cus-mar">
                                 {children}
+                                <div className="mb-3">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Search customers"
+                                        value={searchTerm}
+                                        onChange={handleSearch}
+                                    />
+                                </div>
+                                <div className="table-responsive">
+                                    <table className="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>First Name</th>
+                                                <th>Other Names</th>
+                                                <th>Email</th>
+                                                <th>Mobile Number</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredCustomers.map(customer => (
+                                                <tr key={customer.customer_id} onClick={() => handleRowClick(customer.customer_id)}>
+                                                    <td>{customer.first_name}</td>
+                                                    <td>{customer.other_names}</td>
+                                                    <td>{customer.email}</td>
+                                                    <td>{customer.mobile_number}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -208,7 +274,7 @@ export default function DashboardLayout({
             {showModal && (
                 <div className="modal show" tabIndex="-1" role="dialog" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
                     <div className="modal-dialog" role="document">
-                        <div className="modal-content"style={{  backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <div className="modal-content" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
                             <div className="modal-header">
                                 <h5 className="modal-title">Register New Customer</h5>
                                 <button type="button" className="close" onClick={() => setShowModal(false)}>
@@ -253,12 +319,12 @@ export default function DashboardLayout({
                                         <textarea className="form-control" id="description" name="description" value={formData.description} onChange={handleInputChange} />
                                         {errors.description && <div className="text-danger">{errors.description}</div>}
                                     </div>
-                                        <hr></hr>
-                                        <nav className="navbar">
+                                    <hr></hr>
+                                    <nav className="navbar">
                                         <div className="container d-flex justify-content-end">
                                             <button type="submit" className="btn btn-primary">Submit</button>
                                         </div>
-                                        </nav>
+                                    </nav>
                                 </form>
                             </div>
                         </div>
